@@ -21,6 +21,8 @@ import { useAuth } from "@/context/auth-context";
 import { createClient } from "@/utils/supabase/client";
 import { NewConversationModal } from "./new-conversation-modal";
 import { HiMiniFolderArrowDown } from "react-icons/hi2";
+import { TbMessageCirclePlus } from "react-icons/tb";
+
 
 export default function ChatListView() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -326,14 +328,18 @@ export default function ChatListView() {
           size="icon"
           title="New conversation"
         >
-          <MessageSquarePlusIcon className="h-6 w-6 text-white" />
+          <TbMessageCirclePlus className="h-6 w-6 text-white" />
         </Button>
       </div>
       <div className="w-[400px] border-r border-gray-200 flex flex-col bg-white">
         <div className="p-3 border-b border-gray-200 flex items-center gap-2">
           <div className="flex items-center gap-2 text-green-600 text-sm">
             <span className="flex items-center gap-1">
-              <HiMiniFolderArrowDown className="text-green" height={10} width={10} />
+              <HiMiniFolderArrowDown
+                className="text-green"
+                height={10}
+                width={10}
+              />
               Custom filter
             </span>
           </div>
