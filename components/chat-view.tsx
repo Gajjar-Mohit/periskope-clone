@@ -443,7 +443,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        <div className="max-w-7xl mx-auto space-y-5">
+        <div className="max-w-auto mx-auto space-y-5">
           {Object.entries(groupedMessages).map(
             ([date, dateMessages], dateIndex) => (
               <div key={date} className="space-y-4">

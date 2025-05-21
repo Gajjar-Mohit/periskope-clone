@@ -14,7 +14,10 @@ import {
   LogOut,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 
 interface SidebarProps {
   activeItem: string;
@@ -22,6 +25,14 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Initialize Supabase client - replace with your own URL and anon key
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const supabase = createClient();
+
   const menuItems = [
     { id: "home", icon: Home },
     { id: "chats", icon: MessageCircle },
@@ -32,6 +43,26 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
     { id: "files", icon: FileText },
     { id: "notifications", icon: Bell },
   ];
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Error logging out:", error.message);
+        return;
+      }
+
+      // Redirect to login page after successful logout
+      router.push("/sign-in");
+      router.refresh(); // Ensure the router knows to refresh the page
+    } catch (error) {
+      console.error("Unexpected error during logout:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="w-[45px] bg-white flex flex-col border-r border-gray-200">
@@ -65,8 +96,13 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
         <button className="w-full flex justify-center p-2">
           <Database size={20} />
         </button>
-        <button className="w-full flex justify-center p-2 mb-2">
-          <LogOut size={20} />
+        <button
+          className="w-full flex justify-center p-2 mb-2 hover:text-red-500 transition-colors"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          aria-label="Log out"
+        >
+          <LogOut size={20} className={isLoggingOut ? "opacity-50" : ""} />
         </button>
         <div className="flex justify-center">
           <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs">
