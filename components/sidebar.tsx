@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Home,
@@ -12,13 +12,13 @@ import {
   Star,
   Database,
   LogOut,
-} from "lucide-react"
-import Image from "next/image"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
-  activeItem: string
-  onNavigate: (item: string) => void
+  activeItem: string;
+  onNavigate: (item: string) => void;
 }
 
 export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
@@ -31,22 +31,23 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
     { id: "settings", icon: Settings },
     { id: "files", icon: FileText },
     { id: "notifications", icon: Bell },
-  ]
+  ];
 
   return (
     <div className="w-[45px] bg-white flex flex-col border-r border-gray-200">
-      <div className="p-2 border-b border-gray-200">
-        <div className="w-8 h-8 bg-green-600 rounded-md flex items-center justify-center">
-          <Image src="/placeholder.svg?height=32&width=32" alt="Logo" width={20} height={20} />
-        </div>
+      <div className="w-8 h-8 flex items-center justify-center mt-4 mx-auto">
+        <Image src="/assets/logo.png" alt="Logo" width={60} height={60} />
       </div>
       <div className="flex-1 flex flex-col py-2 gap-4">
         {menuItems.map((item) => {
-          const Icon = item.icon
+          const Icon = item.icon;
           return (
             <button
               key={item.id}
-              className={cn("w-full flex justify-center p-2 relative", activeItem === item.id && "text-green-600")}
+              className={cn(
+                "w-full flex justify-center p-2 relative",
+                activeItem === item.id && "text-green-600"
+              )}
               onClick={() => onNavigate(item.id)}
             >
               {activeItem === item.id && (
@@ -54,7 +55,7 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
               )}
               <Icon size={20} />
             </button>
-          )
+          );
         })}
       </div>
       <div className="mt-auto flex flex-col py-2 border-t border-gray-200">
@@ -74,5 +75,5 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

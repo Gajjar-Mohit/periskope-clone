@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ChatListView from "@/components/chat-list-view";
 import GettingStartedView from "@/components/getting-started-view";
 import Sidebar from "@/components/sidebar";
+import Header from "@/components/header";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"chats" | "getting-started">(
@@ -22,7 +23,10 @@ export default function Home() {
         }}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+      <div className="flex-1 flex flex-col overflow-hidden">
         {activeView === "chats" ? <ChatListView /> : <GettingStartedView />}
+      </div>
       </div>
     </div>
   );
