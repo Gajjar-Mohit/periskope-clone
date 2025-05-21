@@ -197,7 +197,6 @@ export function NewConversationModal({ open, onClose }: NewConversationModalProp
       if (messageError) throw messageError
 
       console.log("Added welcome message")
-      console.log("Conversation created successfully, redirecting to:", `/chats/${newConversation.id}`)
 
       // Navigate to the new conversation
       router.refresh()

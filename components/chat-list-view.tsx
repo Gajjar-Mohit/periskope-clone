@@ -178,6 +178,8 @@ export default function ChatListView() {
           }
         )
         .subscribe();
+      
+      
     } catch (err) {
       console.error("Error setting up realtime subscriptions:", err);
     }

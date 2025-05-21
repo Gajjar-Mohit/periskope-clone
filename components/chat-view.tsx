@@ -18,6 +18,7 @@ import { LiaCheckDoubleSolid } from "react-icons/lia";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/context/auth-context";
 import { Conversation, Message, User } from "@/types";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 interface ChatViewProps {
   chatId: string;
@@ -31,15 +32,17 @@ export default function ChatView({ chatId }: ChatViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const supabase = createClient();
+  // Add this at the top of your component with other imports
+  const supabaseClient = createClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Replace all instances of "supabase" with "supabaseClient" in the component
   const fetchConversationDetails = async () => {
     try {
       setLoading(true);
       // Fetch conversation details
       const { data: conversationData, error: conversationError } =
-        await supabase
+        await supabaseClient
           .from("conversations")
           .select("*")
           .eq("id", chatId)
@@ -53,7 +56,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
       // Fetch participants
       const { data: participantsData, error: participantsError } =
-        await supabase
+        await supabaseClient
           .from("conversation_participants")
           .select("user:user_id(*)")
           .eq("conversation_id", chatId);
@@ -79,7 +82,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
   const fetchMessages = async () => {
     try {
-      const { data: messagesData, error: messagesError } = await supabase
+      const { data: messagesData, error: messagesError } = await supabaseClient
         .from("messages")
         .select("*, sender:sender_id(*)")
         .eq("conversation_id", chatId)
@@ -99,7 +102,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
         if (unreadMessages.length > 0) {
           const unreadIds = unreadMessages.map((msg) => msg.id);
-          await supabase
+          await supabaseClient
             .from("messages")
             .update({ is_read: true })
             .in("id", unreadIds);
@@ -119,28 +122,53 @@ export default function ChatView({ chatId }: ChatViewProps) {
     if (!message.trim() || !user) return;
 
     try {
-      const newMessage = {
+      const newMessageContent = message.trim();
+      setMessage(""); // Clear input immediately for better UX
+
+      // Create a temporary message to display immediately
+      const tempId = `temp-${Date.now()}`;
+      const tempMessage = {
+        id: tempId,
         conversation_id: chatId,
         sender_id: user.id,
-        content: message.trim(),
+        content: newMessageContent,
         is_read: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        sender: user,
       };
 
-      const { error } = await supabase.from("messages").insert(newMessage);
+      // Add to UI immediately
+      setMessages((prev) => [...prev, tempMessage]);
+
+      // Scroll to bottom after adding the new message
+      setTimeout(scrollToBottom, 50);
+
+      console.log("Sending message to database:", newMessageContent);
+
+      // Actually send to database
+      const { data, error } = await supabaseClient
+        .from("messages")
+        .insert({
+          conversation_id: chatId,
+          sender_id: user.id,
+          content: newMessageContent,
+          is_read: false,
+        })
+        .select();
 
       if (error) throw error;
 
+      console.log("Message sent successfully, response:", data);
+
       // Also update the conversation's last_message_at
-      await supabase
+      await supabaseClient
         .from("conversations")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", chatId);
-
-      setMessage("");
     } catch (error: any) {
       console.error("Error sending message:", error);
+      // Could add error handling here to show the user
     }
   };
 
@@ -149,35 +177,92 @@ export default function ChatView({ chatId }: ChatViewProps) {
   };
 
   useEffect(() => {
-    if (chatId) {
-      fetchConversationDetails();
+    let subscription: RealtimeChannel;
 
-      // Subscribe to new messages
-      try {
-        const subscription = supabase
-          .channel(`messages-${chatId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "INSERT",
-              schema: "public",
-              table: "messages",
-              filter: `conversation_id=eq.${chatId}`,
-            },
-            () => {
-              fetchMessages();
+    async function setupRealtime() {
+      if (!chatId) return;
+
+      // First fetch existing data
+      await fetchConversationDetails();
+
+      console.log("Setting up realtime subscription for chat:", chatId);
+
+      // Then set up the subscription
+      subscription = supabaseClient
+        .channel(`messages-channel-${chatId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `conversation_id=eq.${chatId}`,
+          },
+          async (payload) => {
+            console.log("New message received via subscription:", payload);
+
+            try {
+              // Get the full message with sender info
+              const { data, error } = await supabaseClient
+                .from("messages")
+                .select("*, sender:sender_id(*)")
+                .eq("id", payload.new.id)
+                .single();
+
+              if (error) throw error;
+
+              console.log("Fetched complete message data:", data);
+
+              // Update messages state with the new message
+              setMessages((prevMessages) => {
+                // Filter out any temporary message that might be the same
+                const filteredMessages = prevMessages.filter(
+                  (msg) =>
+                    !(
+                      msg.id.toString().startsWith("temp-") &&
+                      msg.content === payload.new.content &&
+                      msg.sender_id === payload.new.sender_id
+                    )
+                );
+
+                return [...filteredMessages, data];
+              });
+
+              // Mark as read if from another user
+              if (user && data.sender_id !== user.id) {
+                await supabaseClient
+                  .from("messages")
+                  .update({ is_read: true })
+                  .eq("id", data.id);
+              }
+
+              // Scroll to bottom for new messages
+              setTimeout(scrollToBottom, 50);
+            } catch (err) {
+              console.error("Error processing new message:", err);
             }
-          )
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(subscription);
-        };
-      } catch (err) {
-        console.error("Error setting up message subscription:", err);
-      }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Subscription status:", status);
+        });
     }
-  }, [chatId, supabase, user]);
+
+    setupRealtime();
+
+    // Clean up subscription when component unmounts or chatId changes
+    return () => {
+      console.log("Cleaning up subscription");
+      if (subscription) {
+        supabaseClient.removeChannel(subscription);
+      }
+    };
+  }, [chatId]);
+
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    scrollToBottom();
+  }, [messages.length]);
 
   // Group messages by date for date separators
   const getMessageDate = (timestamp: string) => {
