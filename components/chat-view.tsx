@@ -10,6 +10,12 @@ import {
   Send,
   Loader2,
   Phone,
+  Clock,
+  RotateCw,
+  Sparkles,
+  FileText,
+  SendHorizonal,
+  SendHorizonalIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -443,7 +449,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
           </Button>
         </div>
       </div>
-
       <div className="flex-1 overflow-auto p-4">
         <div className="max-w-auto mx-auto space-y-5">
           {Object.entries(groupedMessages).map(
@@ -553,13 +558,12 @@ export default function ChatView({ chatId }: ChatViewProps) {
           <div ref={messagesEndRef} />
         </div>
       </div>
-
       <div className="p-3 bg-white border-t border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[#f0f2f5] rounded-lg px-3 py-2">
+        <div className="flex items-center gap-5">
+          <div className="flex-1 flex items-center gap-2  rounded-lg px-3 py-2">
             <Smile size={20} className="text-gray-500" />
-            <Input
-              className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-auto py-0 placeholder:text-gray-500"
+            <input
+              className="flex-1 border-0 bg-transparent focus:outline-none h-auto py-0 placeholder:text-gray-500"
               placeholder="Message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -570,17 +574,28 @@ export default function ChatView({ chatId }: ChatViewProps) {
                 }
               }}
             />
-            <Paperclip size={20} className="text-gray-500" />
-            <Mic size={20} className="text-gray-500" />
           </div>
-          <Button
-            size="icon"
-            className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700"
+          <button
+            className={`h-10 w-10 rounded-full flex items-center justify-center ${
+              message.trim() ? "" : "opacity-50"
+            }`}
             onClick={sendMessage}
             disabled={!message.trim()}
           >
-            <Send size={18} />
-          </Button>
+            <SendHorizonalIcon
+              size={25}
+              className={message.trim() ? "text-green-600" : "text-gray-400"}
+            />
+          </button>
+        </div>
+        <div className="flex items-center gap-10 ml-5 mt-7 mb-3">
+          <Paperclip size={20} className="text-black-500" />
+          <Smile size={20} className="text-black-500 " />
+          <Clock size={20} className="text-black-500 " />
+          <RotateCw size={20} className="text-black-500 " />
+          <Sparkles size={20} className="text-black-500 " />
+          <FileText size={20} className="text-black-500 " />
+          <Mic size={20} className="text-black-500" />
         </div>
       </div>
     </div>
