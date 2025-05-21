@@ -21,6 +21,8 @@ import { useAuth } from "@/context/auth-context";
 import type { Conversation, Message, UserInterface } from "@/types";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import bgImage from "/public/assets/bg.png";
+import { BsStars } from "react-icons/bs";
+
 
 interface ChatViewProps {
   chatId: string;
@@ -398,12 +400,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Search size={18} />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Users size={18} />
-          </Button>
           <div className="flex items-center">
             {participants.slice(0, 3).map((participant, index) => (
               <Avatar
@@ -439,6 +435,12 @@ export default function ChatView({ chatId }: ChatViewProps) {
               </div>
             )}
           </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <BsStars size={18} />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Search size={18} />
+          </Button>
         </div>
       </div>
 

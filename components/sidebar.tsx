@@ -18,6 +18,22 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { AiFillHome } from "react-icons/ai";
+import { BsChatDotsFill } from "react-icons/bs";
+import { IoTicket } from "react-icons/io5";
+import { FaChartLine } from "react-icons/fa6";
+import { TfiMenuAlt } from "react-icons/tfi";
+
+import { HiSpeakerphone } from "react-icons/hi";
+import { IoGitBranchOutline } from "react-icons/io5";
+import { RiContactsBookFill } from "react-icons/ri";
+
+import { RiFolderImageFill } from "react-icons/ri";
+import { MdChecklist } from "react-icons/md";
+import { IoMdSettings } from "react-icons/io";
+import { TbStarsFilled } from "react-icons/tb";
+
+
 
 interface SidebarProps {
   activeItem: string;
@@ -27,21 +43,20 @@ interface SidebarProps {
 export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // Initialize Supabase client - replace with your own URL and anon key
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   const supabase = createClient();
 
   const menuItems = [
-    { id: "home", icon: Home },
-    { id: "chats", icon: MessageCircle },
-    { id: "zap", icon: Zap },
-    { id: "analytics", icon: BarChart2 },
-    { id: "contacts", icon: Users },
-    { id: "settings", icon: Settings },
-    { id: "files", icon: FileText },
-    { id: "notifications", icon: Bell },
+    { id: "home", icon: AiFillHome },
+    { id: "chats", icon: BsChatDotsFill },
+    { id: "zap", icon: IoTicket },
+    { id: "analytics", icon: FaChartLine },
+    { id: "contacts", icon: TfiMenuAlt },
+    { id: "settings", icon: HiSpeakerphone },
+    { id: "files", icon: IoGitBranchOutline },
+    { id: "notifications", icon: RiContactsBookFill },
+    { id: "notifications", icon: RiFolderImageFill },
+    { id: "notifications", icon: MdChecklist },
+    { id: "notifications", icon: IoMdSettings },
   ];
 
   const handleLogout = async () => {
@@ -54,9 +69,8 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
         return;
       }
 
-      // Redirect to login page after successful logout
       router.push("/sign-in");
-      router.refresh(); // Ensure the router knows to refresh the page
+      router.refresh();
     } catch (error) {
       console.error("Unexpected error during logout:", error);
     } finally {
@@ -77,12 +91,12 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
               key={item.id}
               className={cn(
                 "w-full flex justify-center p-2 relative",
-                activeItem === item.id && "text-green-600"
+                activeItem === item.id && "text-green-600 bg-green-100 rounded-sm",
               )}
               onClick={() => onNavigate(item.id)}
             >
               {activeItem === item.id && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-green-600 rounded-r-full" />
+                <div className="absolute   rounded-r-full" />
               )}
               <Icon size={20} />
             </button>
@@ -91,11 +105,9 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
       </div>
       <div className="mt-auto flex flex-col py-2 border-t border-gray-200">
         <button className="w-full flex justify-center p-2">
-          <Star size={20} className="text-yellow-400" />
+          <TbStarsFilled size={20}  />
         </button>
-        <button className="w-full flex justify-center p-2">
-          <Database size={20} />
-        </button>
+        
         <button
           className="w-full flex justify-center p-2 mb-2 hover:text-red-500 transition-colors"
           onClick={handleLogout}
@@ -104,11 +116,7 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
         >
           <LogOut size={20} className={isLoggingOut ? "opacity-50" : ""} />
         </button>
-        <div className="flex justify-center">
-          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs">
-            P
-          </div>
-        </div>
+        
       </div>
     </div>
   );

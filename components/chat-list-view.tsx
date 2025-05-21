@@ -20,6 +20,7 @@ import type { Conversation, Message, UserInterface } from "@/types";
 import { useAuth } from "@/context/auth-context";
 import { createClient } from "@/utils/supabase/client";
 import { NewConversationModal } from "./new-conversation-modal";
+import { HiMiniFolderArrowDown } from "react-icons/hi2";
 
 export default function ChatListView() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
@@ -332,9 +333,7 @@ export default function ChatListView() {
         <div className="p-3 border-b border-gray-200 flex items-center gap-2">
           <div className="flex items-center gap-2 text-green-600 text-sm">
             <span className="flex items-center gap-1">
-              <span className="w-4 h-4 flex items-center justify-center bg-green-600 text-white rounded-sm text-[10px]">
-                <span>✓</span>
-              </span>
+              <HiMiniFolderArrowDown className="text-green" height={10} width={10} />
               Custom filter
             </span>
           </div>
