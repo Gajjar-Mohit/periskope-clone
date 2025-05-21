@@ -4,10 +4,10 @@ import type React from "react";
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import type { User } from "@/types";
+import type { UserInterface } from "@/types";
 
 interface AuthContextType {
-  user: User | null;
+  user: UserInterface | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserInterface | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -105,12 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           );
 
           console.log("Setting user:", userData);
-          setUser(userData as User);
+          setUser(userData as UserInterface);
         } catch (error) {
           console.error("Error ensuring user exists:", error);
 
           // Fallback to a simple user object
-          const simpleUser: User = {
+          const simpleUser: UserInterface = {
             id: data.session.user.id,
             email: data.session.user.email || "",
             full_name: data.session.user.user_metadata?.full_name || "User",
@@ -153,13 +153,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           session.user.user_metadata?.full_name || "User"
         )
           .then((userData) => {
-            setUser(userData as User);
+            setUser(userData as UserInterface);
           })
           .catch((error) => {
             console.error("Error ensuring user exists on auth change:", error);
 
             // Fallback to a simple user object
-            const simpleUser: User = {
+            const simpleUser: UserInterface = {
               id: session.user.id,
               email: session.user.email || "",
               full_name: session.user.user_metadata?.full_name || "User",

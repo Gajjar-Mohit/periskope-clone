@@ -45,8 +45,9 @@ export default function RegisterPage() {
       const email = formData.get("email") as string;
       const password = formData.get("password") as string;
       const fullName = formData.get("fullName") as string;
+      const phoneNumber = formData.get("phoneNumber") as string;
 
-      if (!email || !password || !fullName) {
+      if (!email || !password || !fullName || !phoneNumber) {
         throw new Error("All fields are required");
       }
 
@@ -57,6 +58,7 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: fullName,
+            phone_number: phoneNumber,
           },
         },
       });
@@ -68,6 +70,7 @@ export default function RegisterPage() {
         id: authData.user?.id,
         email,
         full_name: fullName,
+        phone_number: phoneNumber,
       });
 
       if (userError) throw userError;
@@ -155,6 +158,16 @@ export default function RegisterPage() {
                 name="email"
                 type="email"
                 placeholder="name@example.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                placeholder="+1234567890"
                 required
               />
             </div>

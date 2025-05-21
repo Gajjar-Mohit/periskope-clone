@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Filter, Phone, Loader2, PlusIcon } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Phone,
+  Loader2,
+  MessageSquarePlusIcon,
+  Users,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import ChatView from "@/components/chat-view";
-import { Conversation, Message, User } from "@/types";
+import type { Conversation, Message, UserInterface } from "@/types";
 import { useAuth } from "@/context/auth-context";
 import { createClient } from "@/utils/supabase/client";
 import { NewConversationModal } from "./new-conversation-modal";
@@ -21,6 +29,10 @@ export default function ChatListView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastMessages, setLastMessages] = useState<{ [key: string]: Message }>(
+    {}
+  );
+  // Add a state for tracking unread message counts per conversation
+  const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>(
     {}
   );
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] =
@@ -87,7 +99,7 @@ export default function ChatListView() {
         // Extract participants
         const participants = conversation.participants?.map(
           (p: any) => p.user
-        ) as User[];
+        ) as UserInterface[];
 
         // Extract tags
         const tags = conversation.tags?.map((t: any) => t.tag);
@@ -101,8 +113,11 @@ export default function ChatListView() {
 
       // Fetch last message for each conversation
       const lastMessagesObj: { [key: string]: Message } = {};
+      // Object to track unread message counts
+      const unreadCountsObj: { [key: string]: number } = {};
 
       for (const conversation of processedConversations || []) {
+        // First, get the last message
         const { data: messageData, error: messageError } = await supabase
           .from("messages")
           .select("*, sender:sender_id(*)")
@@ -116,9 +131,24 @@ export default function ChatListView() {
           // Also store the last message in the conversation object
           conversation.last_message = messageData;
         }
+
+        // Then, count unread messages
+        const { data: unreadMessages, error: unreadError } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversation.id)
+          .eq("is_read", false)
+          .neq("sender_id", user.id);
+
+        if (!unreadError && unreadMessages) {
+          unreadCountsObj[conversation.id] = unreadMessages.length;
+        } else {
+          unreadCountsObj[conversation.id] = 0;
+        }
       }
 
       setLastMessages(lastMessagesObj);
+      setUnreadCounts(unreadCountsObj);
       setConversations(processedConversations || []);
 
       // Set active chat to first conversation if not already set
@@ -178,8 +208,6 @@ export default function ChatListView() {
           }
         )
         .subscribe();
-      
-      
     } catch (err) {
       console.error("Error setting up realtime subscriptions:", err);
     }
@@ -290,13 +318,14 @@ export default function ChatListView() {
 
   return (
     <div className="flex h-full">
-      <div className="absolute bottom-6 right-[calc(100%-350px)]">
+      <div className="absolute bottom-6 right-[calc(100%-420px)]">
         <Button
-          onClick={() => {setIsNewConversationModalOpen(true)}}
-          className="h-12 w-12 rounded-full shadow-lg bg-green-600 hover:bg-green-700"
+          onClick={() => setIsNewConversationModalOpen(true)}
+          className="h-12 w-12 rounded-full shadow-lg bg-green-600 hover:bg-green-700 transition-colors"
           size="icon"
+          title="New conversation"
         >
-          <PlusIcon className="h-6 w-6" />
+          <MessageSquarePlusIcon className="h-6 w-6 text-white" />
         </Button>
       </div>
       <div className="w-[400px] border-r border-gray-200 flex flex-col bg-white">
@@ -350,10 +379,8 @@ export default function ChatListView() {
               const lastMessage = lastMessages[conversation.id];
               const lastMessageTime =
                 lastMessage?.created_at || conversation.last_message_at;
-              const hasUnread =
-                lastMessage &&
-                !lastMessage.is_read &&
-                lastMessage.sender_id !== user?.id;
+              const unreadCount = unreadCounts[conversation.id] || 0;
+              const hasUnread = unreadCount > 0;
               const phoneNumber = getPhoneNumber(conversation);
 
               return (
@@ -397,30 +424,20 @@ export default function ChatListView() {
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    {hasUnread && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium text-sm truncate">
-                        {getConversationName(conversation)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {formatTime(lastMessageTime)}
-                      </div>
+                    <div className="font-medium text-sm truncate">
+                      {getConversationName(conversation)}
                     </div>
                     <div className="text-sm text-gray-600 truncate">
                       {getLastMessagePreview(conversation)}
                     </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      {phoneNumber && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Phone size={10} className="mr-1" />
-                          {phoneNumber}
-                        </div>
-                      )}
-                    </div>
+                    {phoneNumber && (
+                      <div className="inline-flex items-center text-xs bg-gray-100 px-1.5 py-0.5 rounded-md text-gray-700 w-fit">
+                        <Phone size={10} className="mr-1 text-gray-500" />
+                        {phoneNumber}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-1 min-w-[60px]">
                     <div className="flex gap-1">
@@ -435,15 +452,23 @@ export default function ChatListView() {
                       {conversation.tags?.map((tag) => (
                         <Badge
                           key={tag.id}
-                          variant="outline"
                           className={cn(
                             "text-[10px] h-5 font-normal",
                             tag.color === "green" &&
                               "bg-green-50 text-green-600",
-                            tag.color === "red" && "bg-red-50 text-red-600",
-                            tag.color === "blue" && "bg-blue-50 text-blue-600",
+                            tag.color === "#FFA500" && "bg-red-50 text-red-600",
+                            tag.color === "#00FF00" &&
+                              "bg-blue-50 text-blue-600",
                             !tag.color && "bg-gray-50 text-gray-600"
                           )}
+                          style={
+                            tag.color && tag.color.startsWith("#")
+                              ? {
+                                  backgroundColor: `${tag.color}20`, // 20 is hex for 12% opacity
+                                  color: tag.color,
+                                }
+                              : undefined
+                          }
                         >
                           {tag.name}
                         </Badge>
@@ -458,11 +483,21 @@ export default function ChatListView() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {hasUnread ? (
-                        <div className="w-4 h-4 bg-green-500 rounded-full" />
-                      ) : (
-                        <div className="w-4 h-4 flex items-center justify-center text-gray-400">
-                          ✓
+                      <div className="text-xs text-gray-500">
+                        {formatTime(lastMessageTime)}
+                      </div>
+                      {!hasUnread && (
+                        <div className="w-4 h-4 flex items-center justify-center bg-gray-100 rounded-full text-white">
+                          {conversation.is_group ? (
+                            <Users size={10} fill="currentColor" />
+                          ) : (
+                            <User size={10} fill="currentColor" />
+                          )}
+                        </div>
+                      )}
+                      {hasUnread && (
+                        <div className="w-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-green-500 rounded-full text-white text-[10px] font-bold">
+                          {unreadCount > 9 ? "9+" : unreadCount}
                         </div>
                       )}
                     </div>

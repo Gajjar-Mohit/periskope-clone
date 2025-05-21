@@ -9,6 +9,7 @@ import {
   Mic,
   Send,
   Loader2,
+  Phone,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,9 @@ import { cn } from "@/lib/utils";
 import { LiaCheckDoubleSolid } from "react-icons/lia";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/context/auth-context";
-import { Conversation, Message, User } from "@/types";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import type { Conversation, Message, UserInterface } from "@/types";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import bgImage from "/public/assets/bg.png";
 
 interface ChatViewProps {
   chatId: string;
@@ -28,19 +30,16 @@ export default function ChatView({ chatId }: ChatViewProps) {
   const [message, setMessage] = useState("");
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [participants, setParticipants] = useState<User[]>([]);
+  const [participants, setParticipants] = useState<UserInterface[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  // Add this at the top of your component with other imports
   const supabaseClient = createClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Replace all instances of "supabase" with "supabaseClient" in the component
   const fetchConversationDetails = async () => {
     try {
       setLoading(true);
-      // Fetch conversation details
       const { data: conversationData, error: conversationError } =
         await supabaseClient
           .from("conversations")
@@ -54,7 +53,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
       setConversation(conversationData);
 
-      // Fetch participants
       const { data: participantsData, error: participantsError } =
         await supabaseClient
           .from("conversation_participants")
@@ -66,11 +64,10 @@ export default function ChatView({ chatId }: ChatViewProps) {
       }
 
       const extractedParticipants = participantsData.map(
-        (p) => p.user as unknown as User
+        (p) => p.user as unknown as UserInterface
       );
       setParticipants(extractedParticipants);
 
-      // Fetch messages
       await fetchMessages();
     } catch (error: any) {
       console.error("Error fetching conversation details:", error);
@@ -94,7 +91,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
       setMessages(messagesData || []);
 
-      // Mark unread messages as read
       if (user && messagesData) {
         const unreadMessages = messagesData.filter(
           (msg) => !msg.is_read && msg.sender_id !== user.id
@@ -109,7 +105,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
         }
       }
 
-      // Scroll to bottom
       setTimeout(() => {
         scrollToBottom();
       }, 100);
@@ -123,9 +118,8 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
     try {
       const newMessageContent = message.trim();
-      setMessage(""); // Clear input immediately for better UX
+      setMessage("");
 
-      // Create a temporary message to display immediately
       const tempId = `temp-${Date.now()}`;
       const tempMessage = {
         id: tempId,
@@ -138,15 +132,12 @@ export default function ChatView({ chatId }: ChatViewProps) {
         sender: user,
       };
 
-      // Add to UI immediately
       setMessages((prev) => [...prev, tempMessage]);
 
-      // Scroll to bottom after adding the new message
       setTimeout(scrollToBottom, 50);
 
       console.log("Sending message to database:", newMessageContent);
 
-      // Actually send to database
       const { data, error } = await supabaseClient
         .from("messages")
         .insert({
@@ -161,14 +152,12 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
       console.log("Message sent successfully, response:", data);
 
-      // Also update the conversation's last_message_at
       await supabaseClient
         .from("conversations")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", chatId);
     } catch (error: any) {
       console.error("Error sending message:", error);
-      // Could add error handling here to show the user
     }
   };
 
@@ -182,12 +171,10 @@ export default function ChatView({ chatId }: ChatViewProps) {
     async function setupRealtime() {
       if (!chatId) return;
 
-      // First fetch existing data
       await fetchConversationDetails();
 
       console.log("Setting up realtime subscription for chat:", chatId);
 
-      // Then set up the subscription
       subscription = supabaseClient
         .channel(`messages-channel-${chatId}`)
         .on(
@@ -202,7 +189,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
             console.log("New message received via subscription:", payload);
 
             try {
-              // Get the full message with sender info
               const { data, error } = await supabaseClient
                 .from("messages")
                 .select("*, sender:sender_id(*)")
@@ -213,9 +199,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
               console.log("Fetched complete message data:", data);
 
-              // Update messages state with the new message
               setMessages((prevMessages) => {
-                // Filter out any temporary message that might be the same
                 const filteredMessages = prevMessages.filter(
                   (msg) =>
                     !(
@@ -228,7 +212,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
                 return [...filteredMessages, data];
               });
 
-              // Mark as read if from another user
               if (user && data.sender_id !== user.id) {
                 await supabaseClient
                   .from("messages")
@@ -236,7 +219,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
                   .eq("id", data.id);
               }
 
-              // Scroll to bottom for new messages
               setTimeout(scrollToBottom, 50);
             } catch (err) {
               console.error("Error processing new message:", err);
@@ -250,7 +232,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
     setupRealtime();
 
-    // Clean up subscription when component unmounts or chatId changes
     return () => {
       console.log("Cleaning up subscription");
       if (subscription) {
@@ -260,13 +241,17 @@ export default function ChatView({ chatId }: ChatViewProps) {
   }, [chatId]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     scrollToBottom();
   }, [messages.length]);
 
-  // Group messages by date for date separators
+  // Updated getMessageDate to use ISO date string
   const getMessageDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleDateString();
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      console.error("Invalid timestamp:", timestamp);
+      return "Invalid Date";
+    }
+    return date.toISOString().split("T")[0];
   };
 
   const groupedMessages: { [date: string]: Message[] } = {};
@@ -282,7 +267,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
     if (!conversation) return "Loading...";
     if (conversation.name) return conversation.name;
 
-    // For non-group chats, use the other participant's name
     if (!conversation.is_group && participants.length > 0) {
       const otherParticipants = participants.filter((p) => p.id !== user?.id);
       if (otherParticipants.length > 0) {
@@ -307,28 +291,54 @@ export default function ChatView({ chatId }: ChatViewProps) {
   };
 
   const formatMessageTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return "";
+      }
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting message time:", error);
+      return "";
+    }
   };
 
-  const formatDateSeparator = (date: string) => {
-    const messageDate = new Date(date);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+  const formatDateSeparator = (dateStr: string) => {
+    try {
+      const messageDate = new Date(dateStr);
+      console.log("Parsed date:", messageDate);
+      console.log("Date string:", dateStr);
 
-    if (messageDate.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return messageDate.toLocaleDateString([], {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      if (isNaN(messageDate.getTime())) {
+        console.error("Invalid date for separator:", dateStr);
+        return "Unknown Date";
+      }
+
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const messageDateStr = messageDate.toISOString().split("T")[0];
+      const todayStr = today.toISOString().split("T")[0];
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+      if (messageDateStr === todayStr) {
+        return "Today";
+      } else if (messageDateStr === yesterdayStr) {
+        return "Yesterday";
+      } else {
+        return messageDate.toLocaleDateString(undefined, {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+      }
+    } catch (error) {
+      console.error("Error formatting date separator:", error);
+      return "Unknown Date";
     }
   };
 
@@ -350,8 +360,14 @@ export default function ChatView({ chatId }: ChatViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f0f2f5] overflow-hidden">
-      {/* Header */}
+    <div
+      className="flex-1 flex flex-col overflow-hidden"
+      style={{
+        backgroundImage: `url(${bgImage.src})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div className="bg-white p-3 border-b border-gray-200 flex items-center">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
@@ -396,7 +412,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
               >
                 {participant.avatar_url ? (
                   <AvatarImage
-                    src={participant.avatar_url}
+                    src={participant.avatar_url || "/placeholder.svg"}
                     alt={participant.full_name || ""}
                   />
                 ) : (
@@ -426,7 +442,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-auto p-4">
         <div className="max-w-7xl mx-auto space-y-5">
           {Object.entries(groupedMessages).map(
@@ -440,6 +455,7 @@ export default function ChatView({ chatId }: ChatViewProps) {
 
                 {dateMessages.map((msg, msgIndex) => {
                   const isFromCurrentUser = msg.sender_id === user?.id;
+                  const isOpponent = !isFromCurrentUser;
 
                   return (
                     <div
@@ -451,25 +467,65 @@ export default function ChatView({ chatId }: ChatViewProps) {
                     >
                       <div
                         className={cn(
-                          "max-w-[70%] rounded-lg p-2 px-3",
+                          "max-w-[70%] rounded-lg p-2 px-3 drop-shadow-md",
                           isFromCurrentUser ? "bg-[#d9fdd3]" : "bg-white"
                         )}
                       >
                         {!isFromCurrentUser && msg.sender && (
-                          <div className="text-sm font-medium text-green-600">
-                            {msg.sender.full_name ||
-                              msg.sender.phone_number ||
-                              msg.sender.email}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-sm font-medium text-green-600">
+                              {msg.sender.full_name ||
+                                msg.sender.email ||
+                                "Unknown User"}
+                            </div>
+                            {msg.sender?.phone_number && (
+                              <div className="text-xs  px-1.5 py-0.5 rounded-md text-gray-700 flex items-center">
+                                {msg.sender.phone_number}
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {isFromCurrentUser && (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="font-bold text-sm text-green-800">
+                              Periskope
+                            </div>
+                            {msg.sender?.phone_number && (
+                              <div className="text-xs  px-1.5 py-0.5 rounded-md text-gray-700 flex items-center ml-auto">
+                                {msg.sender.phone_number}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="text-sm">{msg.content}</div>
                         <div className="flex items-center justify-end gap-1 mt-1">
                           {msg.sender?.email && isFromCurrentUser && (
-                            <span className="text-[10px] text-gray-500">
-                              ✓ {msg.sender.email}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="mr-1">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="10"
+                                  height="10"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="text-gray-500"
+                                >
+                                  <path d="m22 2-7 20-4-9-9-4Z"></path>
+                                  <path d="M22 2 11 13"></path>
+                                </svg>
+                              </span>
+                              <span className="text-[10px] text-gray-500">
+                                {msg.sender.email}
+                              </span>
+                            </div>
                           )}
-                          <span className="text-[10px] text-gray-500">
+                          <span className="text-[10px] text-gray-500 ml-4">
                             {formatMessageTime(msg.created_at)}
                           </span>
                           {isFromCurrentUser && (
@@ -496,7 +552,6 @@ export default function ChatView({ chatId }: ChatViewProps) {
         </div>
       </div>
 
-      {/* Input */}
       <div className="p-3 bg-white border-t border-gray-200">
         <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-2 bg-[#f0f2f5] rounded-lg px-3 py-2">
