@@ -83,7 +83,7 @@ export default function RegisterPage() {
       if (signInError) {
         // If sign in fails, redirect to login page
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = "/sign-in";
         }, 2000);
       } else {
         // If sign in succeeds, redirect to chats page
@@ -179,7 +179,7 @@ export default function RegisterPage() {
             </Button>
             <div className="text-center text-sm">
               Already have an account?{" "}
-              <Link href="/login" className="text-green-600 hover:underline">
+              <Link href="/sign-in" className="text-green-600 hover:underline">
                 Sign in
               </Link>
             </div>
